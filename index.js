@@ -57,7 +57,7 @@ const RADIO_STATIONS = {
     "handofjesus": {
         name: "Hand Of Jesus - Gujarati",
         url: "https://dc1.serverse.com/proxy/hojgujarati/stream",
-        emoji: "☆"
+        emoji: "🎇"
     }
 };
 
