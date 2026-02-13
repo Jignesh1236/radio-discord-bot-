@@ -53,6 +53,11 @@ const RADIO_STATIONS = {
         name: "Lata Mangeshkar Radio",
         url: "https://stream.zeno.fm/87xam8pf7tzuv",
         emoji: "🎼"
+    },
+    "handofjesus": {
+        name: "Hand Of Jesus - Gujarati",
+        url: "https://dc1.serverse.com/proxy/hojgujarati/stream",
+        emoji: "☆"
     }
 };
 
