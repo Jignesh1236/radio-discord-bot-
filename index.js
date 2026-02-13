@@ -48,6 +48,11 @@ const RADIO_STATIONS = {
         name: "Kishore Kumar Radio",
         url: "https://stream.zeno.fm/0ghtfp8ztm0uv",
         emoji: "🎤"
+    },
+    "lata": {
+        name: "Lata Mangeshkar Radio",
+        url: "https://stream.zeno.fm/87xam8pf7tzuv",
+        emoji: "🎼"
     }
 };
 
