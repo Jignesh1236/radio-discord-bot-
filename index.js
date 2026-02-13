@@ -71,7 +71,11 @@ const client = new Client({
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.DirectMessages
-    ]
+    ],
+    rest: {
+        timeout: 30000,
+        retries: 3
+    }
 });
 
 let connection;
@@ -292,14 +296,67 @@ client.on("voiceStateUpdate", (oldState, newState) => {
     }
 });
 
-/* ---------------- ERROR HANDLING ---------------- */
+/* ---------------- CLIENT EVENTS ---------------- */
+client.on('ready', () => {
+    console.log(`✅ Bot logged in as ${client.user.tag}`);
+});
+
+client.on('error', error => {
+    console.error('❌ Client error:', error.message);
+});
+
+client.on('shardError', error => {
+    console.error('❌ Shard error:', error.message);
+});
+
+client.on('shardReconnecting', () => {
+    console.log('🔄 Shard reconnecting...');
+});
+
+client.on('shardResume', () => {
+    console.log('✅ Shard resumed');
+});
+
+/* ---------------- ERROR HANDLING WITH RETRY ---------------- */
+let loginAttempts = 0;
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_RETRY_DELAY = 5000; // 5 seconds
+
 process.on('unhandledRejection', error => {
-    console.error('Unhandled promise rejection:', error);
+    console.error('❌ Unhandled promise rejection:', error.message);
+    if (error.code === 'UND_ERR_CONNECT_TIMEOUT') {
+        console.log('⚠️ Connection timeout detected. Attempting to reconnect...');
+        retryLogin();
+    }
 });
 
 process.on('uncaughtException', error => {
-    console.error('Uncaught exception:', error);
+    console.error('❌ Uncaught exception:', error.message);
 });
 
+function retryLogin() {
+    if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+        console.error('❌ Max login attempts reached. Stopping bot.');
+        process.exit(1);
+    }
+
+    loginAttempts++;
+    console.log(`🔄 Login attempt ${loginAttempts}/${MAX_LOGIN_ATTEMPTS}...`);
+    
+    setTimeout(() => {
+        if (!client.isReady()) {
+            console.log('Retrying login...');
+            client.login(TOKEN).catch(err => {
+                console.error('Login failed:', err.message);
+                retryLogin();
+            });
+        }
+    }, LOGIN_RETRY_DELAY);
+}
+
 /* ---------------- LOGIN ---------------- */
-client.login(TOKEN);
+console.log('🚀 Starting Discord bot...');
+client.login(TOKEN).catch(error => {
+    console.error('❌ Initial login failed:', error.message);
+    retryLogin();
+});
