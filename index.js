@@ -1,7 +1,10 @@
 const { 
     Client, 
     GatewayIntentBits, 
-    ChannelType 
+    ChannelType,
+    EmbedBuilder,
+    StringSelectMenuBuilder,
+    ActionRowBuilder
 } = require('discord.js');
 
 const {
@@ -18,14 +21,41 @@ const prism = require('prism-media');
 const ffmpegPath = require('ffmpeg-static');
 
 const TOKEN = "TOKEN_HERE";
-const STREAM_URL = "https://eu8.fastcast4u.com/proxy/clyedupq?mp=%2F1?aw_0_req_lsid=2c0fae177108c9a42a7cf24878625444";
+
+// Radio Stations Configuration
+const RADIO_STATIONS = {
+    "big927": {
+        name: "BIG 92.7 FM (Vadodara)",
+        url: "https://stream.zeno.fm/dbstwo3dvhhtv",
+        emoji: "🎵"
+    },
+    "radiocity911": {
+        name: "Radio City 91.1 FM (Vadodara)",
+        url: "https://stream.zeno.fm/pxc55r5uyc9uv",
+        emoji: "🎶"
+    },
+    "red935": {
+        name: "Red 93.5 FM (Vadodara)",
+        url: "https://stream.zeno.fm/9phrkb1e3v8uv",
+        emoji: "🔴"
+    },
+    "radiomirchi983": {
+        name: "Radio Mirchi 98.3 FM (Vadodara)",
+        url: "https://eu8.fastcast4u.com/proxy/clyedupq?mp=%2F1?aw_0_req_lsid=2c0fae177108c9a42a7cf24878625444",
+        emoji: "📻"
+    }
+};
+
+let currentStreamUrl = RADIO_STATIONS.big927.url;
+let currentStationId = "big927";
 
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.DirectMessages
     ]
 });
 
@@ -43,7 +73,7 @@ function createStream() {
             "-reconnect_delay_max", "5",
             "-fflags", "nobuffer",
             "-flags", "low_delay",
-            "-i", STREAM_URL,
+            "-i", currentStreamUrl,
             "-f", "s16le",
             "-ar", "48000",
             "-ac", "2",
@@ -135,7 +165,7 @@ function reconnect() {
     connectToChannel(currentChannel);
 }
 
-/* ---------------- COMMAND ---------------- */
+/* ---------------- COMMAND & INTERACTIONS ---------------- */
 client.on("messageCreate", async (message) => {
 
     if (message.content === "!radio") {
@@ -149,6 +179,85 @@ client.on("messageCreate", async (message) => {
         await connectToChannel(message.member.voice.channel);
 
         message.reply("📻 Radio Started (24/7 Mode)");
+    }
+
+    // Send radio player embed with dropdown
+    if (message.content === "!player") {
+        const embed = new EmbedBuilder()
+            .setColor("#FF0000")
+            .setTitle("🎙️ Radio Station Selector")
+            .setDescription("Select a radio station from the dropdown below")
+            .addFields(
+                { name: "Current Station", value: `${RADIO_STATIONS[currentStationId].emoji} ${RADIO_STATIONS[currentStationId].name}`, inline: false }
+            )
+            .setFooter({ text: "Click the dropdown to change station" })
+            .setTimestamp();
+
+        const selectMenu = new StringSelectMenuBuilder()
+            .setCustomId("radio_select")
+            .setPlaceholder("Choose a radio station...")
+            .addOptions(
+                Object.entries(RADIO_STATIONS).map(([id, station]) => ({
+                    label: station.name,
+                    value: id,
+                    emoji: station.emoji,
+                    default: id === currentStationId
+                }))
+            );
+
+        const row = new ActionRowBuilder().addComponents(selectMenu);
+
+        message.channel.send({ embeds: [embed], components: [row] });
+    }
+});
+
+// Handle radio station selection
+client.on("interactionCreate", async (interaction) => {
+    if (!interaction.isStringSelectMenu()) return;
+
+    if (interaction.customId === "radio_select") {
+        const selectedStationId = interaction.values[0];
+        const selectedStation = RADIO_STATIONS[selectedStationId];
+
+        if (!selectedStation) return interaction.reply({ content: "Station not found!", ephemeral: true });
+
+        // Update current stream
+        currentStreamUrl = selectedStation.url;
+        currentStationId = selectedStationId;
+
+        // Reload stream if bot is connected
+        if (player) {
+            reloadStream();
+        }
+
+        // Update embed
+        const embed = new EmbedBuilder()
+            .setColor("#00FF00")
+            .setTitle("🎙️ Radio Station Selector")
+            .setDescription("Select a radio station from the dropdown below")
+            .addFields(
+                { name: "Current Station", value: `${selectedStation.emoji} ${selectedStation.name}`, inline: false }
+            )
+            .setFooter({ text: "Switched to new station!" })
+            .setTimestamp();
+
+        const selectMenu = new StringSelectMenuBuilder()
+            .setCustomId("radio_select")
+            .setPlaceholder("Choose a radio station...")
+            .addOptions(
+                Object.entries(RADIO_STATIONS).map(([id, station]) => ({
+                    label: station.name,
+                    value: id,
+                    emoji: station.emoji,
+                    default: id === currentStationId
+                }))
+            );
+
+        const row = new ActionRowBuilder().addComponents(selectMenu);
+
+        await interaction.update({ embeds: [embed], components: [row] });
+        
+        console.log(`Switched to: ${selectedStation.name}`);
     }
 });
 
