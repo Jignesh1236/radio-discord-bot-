@@ -4,7 +4,9 @@ const {
     ChannelType,
     EmbedBuilder,
     StringSelectMenuBuilder,
-    ActionRowBuilder
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle
 } = require('discord.js');
 
 const {
@@ -58,6 +60,11 @@ const RADIO_STATIONS = {
         name: "Hand Of Jesus - Gujarati",
         url: "https://dc1.serverse.com/proxy/hojgujarati/stream",
         emoji: "🎇"
+    },
+    "aajtaklive": {
+        name: "Aaj Tak (Audio)",
+        url: "https://aajtaklive-amd.akamaized.net/hls/live/2014416/aajtak/aajtaklive/live_720p/chunks.m3u8",
+        emoji: "📺"
     }
 };
 
@@ -77,6 +84,10 @@ const client = new Client({
 let connection;
 let player;
 let currentChannel;
+let autoRefreshInterval;
+
+// Auto refresh stream every 30 minutes
+const AUTO_REFRESH_INTERVAL = 30 * 60 * 1000;
 
 /* ---------------- STREAM CREATE ---------------- */
 function createStream() {
@@ -154,6 +165,9 @@ async function connectToChannel(channel) {
         reloadStream();
     });
 
+    // Start auto-refresh
+    startAutoRefresh();
+
     connection.subscribe(player);
 
     startStream();
@@ -180,6 +194,24 @@ function reconnect() {
     connectToChannel(currentChannel);
 }
 
+/* ---------------- AUTO REFRESH ---------------- */
+function startAutoRefresh() {
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    autoRefreshInterval = setInterval(() => {
+        if (player) {
+            console.log("Auto-refreshing stream...");
+            reloadStream();
+        }
+    }, AUTO_REFRESH_INTERVAL);
+}
+
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+    }
+}
+
 /* ---------------- COMMAND & INTERACTIONS ---------------- */
 client.on("messageCreate", async (message) => {
 
@@ -196,7 +228,7 @@ client.on("messageCreate", async (message) => {
         message.reply("📻 Radio Started (24/7 Mode)");
     }
 
-    // Send radio player embed with dropdown
+    // Send radio player embed with dropdown and refresh button
     if (message.content === "!player") {
         const embed = new EmbedBuilder()
             .setColor("#FF0000")
@@ -205,7 +237,7 @@ client.on("messageCreate", async (message) => {
             .addFields(
                 { name: "Current Station", value: `${RADIO_STATIONS[currentStationId].emoji} ${RADIO_STATIONS[currentStationId].name}`, inline: false }
             )
-            .setFooter({ text: "Click the dropdown to change station" })
+            .setFooter({ text: "Click the dropdown to change station or use refresh button" })
             .setTimestamp();
 
         const selectMenu = new StringSelectMenuBuilder()
@@ -220,17 +252,24 @@ client.on("messageCreate", async (message) => {
                 }))
             );
 
-        const row = new ActionRowBuilder().addComponents(selectMenu);
+        const refreshButton = new ButtonBuilder()
+            .setCustomId("radio_refresh")
+            .setLabel("🔄 Refresh Stream")
+            .setStyle(ButtonStyle.Primary);
 
-        message.channel.send({ embeds: [embed], components: [row] });
+        const row1 = new ActionRowBuilder().addComponents(selectMenu);
+        const row2 = new ActionRowBuilder().addComponents(refreshButton);
+
+        message.channel.send({ embeds: [embed], components: [row1, row2] });
     }
 });
 
 // Handle radio station selection
 client.on("interactionCreate", async (interaction) => {
-    if (!interaction.isStringSelectMenu()) return;
+    if (!interaction.isStringSelectMenu() && !interaction.isButton()) return;
 
-    if (interaction.customId === "radio_select") {
+    // Handle station selection dropdown
+    if (interaction.isStringSelectMenu() && interaction.customId === "radio_select") {
         const selectedStationId = interaction.values[0];
         const selectedStation = RADIO_STATIONS[selectedStationId];
 
@@ -268,13 +307,38 @@ client.on("interactionCreate", async (interaction) => {
                 }))
             );
 
-        const row = new ActionRowBuilder().addComponents(selectMenu);
+        const refreshButton = new ButtonBuilder()
+            .setCustomId("radio_refresh")
+            .setLabel("🔄 Refresh Stream")
+            .setStyle(ButtonStyle.Primary);
 
-        await interaction.update({ embeds: [embed], components: [row] });
+        const row1 = new ActionRowBuilder().addComponents(selectMenu);
+        const row2 = new ActionRowBuilder().addComponents(refreshButton);
+
+        await interaction.update({ embeds: [embed], components: [row1, row2] });
         
         console.log(`Switched to: ${selectedStation.name}`);
     }
+
+    // Handle refresh button
+    if (interaction.isButton() && interaction.customId === "radio_refresh") {
+        if (!player) {
+            return interaction.reply({ content: "❌ Radio is not running!", ephemeral: true });
+        }
+
+        reloadStream();
+        
+        const embed = new EmbedBuilder()
+            .setColor("#0099FF")
+            .setTitle("🔄 Stream Refreshed")
+            .setDescription(`Now playing: ${RADIO_STATIONS[currentStationId].emoji} ${RADIO_STATIONS[currentStationId].name}`)
+            .setTimestamp();
+
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+        console.log("Stream manually refreshed!");
+    }
 });
+
 
 /* ---------------- RELOAD ON USER JOIN ---------------- */
 client.on("voiceStateUpdate", (oldState, newState) => {
