@@ -38,7 +38,7 @@ const RADIO_STATIONS = {
     },
     "red935": {
         name: "Red 93.5 FM (Vadodara)",
-        url: "https://stream.zeno.fm/9phrkb1e3v8uv",
+        url: "https://stream.zeno.fm/q97eczydqrhvv",
         emoji: "🔴"
     },
     "radiomirchi983": {
