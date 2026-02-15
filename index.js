@@ -70,6 +70,11 @@ const RADIO_STATIONS = {
         name: "Vividh Bharati",
         url: "https://air.pc.cdn.bitgravity.com/air/live/pbaudio001/playlist.m3u8",
         emoji: "🎙️"
+    },
+    "airfmgold": {
+        name: "Air FM Gold aakashwani",
+        url: "https://airhlspush.pc.cdn.bitgravity.com/httppush/hlspbaudio005/hlspbaudio00564kbps.m3u8",
+        emoji: "💛"
     }
 };
 
