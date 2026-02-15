@@ -22,7 +22,7 @@ const {
 const prism = require('prism-media');
 const ffmpegPath = require('ffmpeg-static');
 
-const TOKEN = "TOKEN_HERE";
+const TOKEN = "---------"; 
 
 // Radio Stations Configuration
 const RADIO_STATIONS = {
@@ -65,6 +65,11 @@ const RADIO_STATIONS = {
         name: "Aaj Tak (Audio)",
         url: "https://aajtaklive-amd.akamaized.net/hls/live/2014416/aajtak/aajtaklive/live_720p/chunks.m3u8",
         emoji: "📺"
+    },
+    "vividh_bharati": {
+        name: "Vividh Bharati",
+        url: "https://air.pc.cdn.bitgravity.com/air/live/pbaudio001/playlist.m3u8",
+        emoji: "🎙️"
     }
 };
 
@@ -84,10 +89,6 @@ const client = new Client({
 let connection;
 let player;
 let currentChannel;
-let autoRefreshInterval;
-
-// Auto refresh stream every 30 minutes
-const AUTO_REFRESH_INTERVAL = 30 * 60 * 1000;
 
 /* ---------------- STREAM CREATE ---------------- */
 function createStream() {
@@ -165,9 +166,6 @@ async function connectToChannel(channel) {
         reloadStream();
     });
 
-    // Start auto-refresh
-    startAutoRefresh();
-
     connection.subscribe(player);
 
     startStream();
@@ -192,24 +190,6 @@ function reconnect() {
     if (!currentChannel) return;
     console.log("Reconnecting...");
     connectToChannel(currentChannel);
-}
-
-/* ---------------- AUTO REFRESH ---------------- */
-function startAutoRefresh() {
-    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-    autoRefreshInterval = setInterval(() => {
-        if (player) {
-            console.log("Auto-refreshing stream...");
-            reloadStream();
-        }
-    }, AUTO_REFRESH_INTERVAL);
-}
-
-function stopAutoRefresh() {
-    if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
-        autoRefreshInterval = null;
-    }
 }
 
 /* ---------------- COMMAND & INTERACTIONS ---------------- */
