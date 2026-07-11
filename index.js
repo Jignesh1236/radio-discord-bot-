@@ -75,7 +75,17 @@ const RADIO_STATIONS = {
         name: "Air FM Gold aakashwani",
         url: "https://airhlspush.pc.cdn.bitgravity.com/httppush/hlspbaudio005/hlspbaudio00564kbps.m3u8",
         emoji: "💛"
-    }
+    },
+    "pune_aakash":{
+    	name: "Akashvani Pune FM",
+    	url: "https://air.pc.cdn.bitgravity.com/air/live/pbaudio013/playlist.m3u8",
+    	emoji: "🔦"
+},
+        "jaipur":{
+    	name: "jaipur 91.1",
+    	url: "https://streamasiacdn.atc-labs.com/jaipurradio.aac",
+    	emoji: "🦆"
+},
 };
 
 let currentStreamUrl = RADIO_STATIONS.big927.url;
